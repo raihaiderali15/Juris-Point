@@ -20,7 +20,6 @@ const generateTokens = async (userId) => {
   return { accessToken, refreshToken };
 };
 
-
 //register user
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, fullName, confirmPassword } = req.body;
@@ -143,7 +142,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
   const isMatch = crypto.timingSafeEqual(
     Buffer.from(user.refreshToken),
-    Buffer.from(refreshToken)
+    Buffer.from(refreshToken),
   );
   if (!isMatch) {
     throw new apiError(401, "Refresh token mismatch");
@@ -159,14 +158,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000,         
+    maxAge: 24 * 60 * 60 * 1000,
   };
 
   const refreshTokenCookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,     
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   };
 
   return res
@@ -177,8 +176,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       new apiResponse(
         200,
         { accessToken: newAccessToken },
-        "New access token generated successfully"
-      )
+        "New access token generated successfully",
+      ),
     );
 });
 //: add forgot password and reset password functionality
@@ -266,7 +265,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
   }
   return res
     .status(200)
-    .json(new apiResponse(200, { user }, "User profile retrieved successfully"));
+    .json(
+      new apiResponse(200, { user }, "User profile retrieved successfully"),
+    );
 });
 // update Profile
 const updateUserProfile = asyncHandler(async (req, res) => {
@@ -276,7 +277,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   const fieldsToUpdate = {};
   if (username?.trim()) fieldsToUpdate.username = username.trim();
   if (email?.trim()) {
-    if (!validator.isEmail(email)) throw new apiError(400, "Invalid email format");
+    if (!validator.isEmail(email))
+      throw new apiError(400, "Invalid email format");
     fieldsToUpdate.email = email.trim();
   }
   if (fullName?.trim()) fieldsToUpdate.fullName = fullName.trim();
@@ -290,7 +292,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: fieldsToUpdate },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password -refreshToken");
   } catch (err) {
     if (err.code === 11000) {
@@ -305,20 +307,35 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new apiResponse(200, { user: updatedUser }, "User profile updated successfully"));
+    .json(
+      new apiResponse(
+        200,
+        { user: updatedUser },
+        "User profile updated successfully",
+      ),
+    );
 });
 //change password
 const changePassword = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { currentPassword, newPassword, confirmNewPassword } = req.body;
   const fields = { currentPassword, newPassword, confirmNewPassword };
-  for(const [key,value] of Object.entries(fields)){
-    if(!value?.trim()){
+  for (const [key, value] of Object.entries(fields)) {
+    if (typeof value !== "string" || !value?.trim()) {
       throw new apiError(400, `${key} is required`);
     }
   }
+  if (currentPassword === newPassword) {
+    throw new apiError(
+      400,
+      "New password must be different from current password",
+    );
+  }
   if (newPassword !== confirmNewPassword) {
-    throw new apiError(400, "New password and confirm new password do not match");
+    throw new apiError(
+      400,
+      "New password and confirm new password do not match",
+    );
   }
 
   const user = await User.findById(userId).select("+password");
@@ -328,19 +345,79 @@ const changePassword = asyncHandler(async (req, res) => {
 
   const isCurrentPasswordValid = await user.comparePassword(currentPassword);
   if (!isCurrentPasswordValid) {
-    throw new apiError(400, "Current password is incorrect");
+    throw new apiError(401, "Current password is incorrect");
   }
 
   user.password = newPassword;
-  try {
-    await user.save();
-  } catch (err) {
-    throw new apiError(500, "Something went wrong while changing password");
+  user.refreshToken = undefined;
+  await user.save();
+  const cookiesOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookiesOptions)
+    .clearCookie("refreshToken", cookiesOptions)
+    .json(new apiResponse(200, {}, "Password changed successfully"));
+});
+// get all user (admin only)
+const getAllUsers = asyncHandler(async (req, res) => {
+const page = Number(req.query.page) || 1;
+const limit = Number(req.query.limit) || 10;
+const skip = (page - 1) * limit;
+
+const users = await User.find()
+  .select("-password -refreshToken")
+  .skip(skip)
+  .limit(limit);
+  return res
+    .status(200)
+    .json(new apiResponse(200, { users }, "Users retrieved successfully"));
+});
+//change user role (admin only) 
+const changeUserRole = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+
+  if (req.user.role !== "admin") {
+    throw new apiError(403, "Only admins can change user roles");
+  }
+
+  if (req.user._id.toString() === userId) {
+    throw new apiError(400, "You cannot change your own role");
+  }
+
+  if (typeof role !== "string" || !role.trim()) {
+    throw new apiError(400, "Role is required");
+  }
+
+  const normalizedRole = role.trim();
+
+  const allowedRoles = ["user", "admin"];
+  if (!allowedRoles.includes(normalizedRole)) {
+    throw new apiError(
+      400,
+      `Role must be one of: ${allowedRoles.join(", ")}`
+    );
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { role: normalizedRole },
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  if (!user) {
+    throw new apiError(404, "User not found");
   }
 
   return res
     .status(200)
-    .json(new apiResponse(200, {}, "Password changed successfully"));
+    .json(
+      new apiResponse(200, { user }, "User role updated successfully")
+    );
 });
 export {
   registerUser,
@@ -352,4 +429,6 @@ export {
   getUserProfile,
   updateUserProfile,
   changePassword,
+  getAllUsers,
+  changeUserRole
 };

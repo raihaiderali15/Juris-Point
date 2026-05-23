@@ -5,7 +5,6 @@ import crypto from "crypto";
 import { createHash } from "crypto";
 const { Schema } = mongoose;
 
-
 const userSchema = new Schema(
   {
     fullName: {
@@ -49,7 +48,7 @@ const userSchema = new Schema(
     role: {
       type: String,
       enum: {
-        values: ["user" ,"admin"],
+        values: ["user", "admin"],
         message: "{VALUE} is not a valid role",
       },
       default: "user",
@@ -59,12 +58,12 @@ const userSchema = new Schema(
       default: false,
     },
 
-accountStatus: {
-  type: String,
-  enum: ["active", "suspended", "banned"],
-  default: "active",
-},
-    
+    accountStatus: {
+      type: String,
+      enum: ["active", "suspended", "banned"],
+      default: "active",
+    },
+
     refreshToken: {
       type: String,
       select: false,
@@ -85,9 +84,9 @@ accountStatus: {
       select: false,
     },
     emailVerificationExpiry: {
-  type: Date,
-  select: false,
-},
+      type: Date,
+      select: false,
+    },
 
     lastLogin: {
       type: Date,
@@ -98,13 +97,11 @@ accountStatus: {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
-          
-      
-userSchema.index({ role: 1 });              // Filter by role in admin queries
-userSchema.index({ createdAt: -1 });       // Latest registrations for admin dashboard
+userSchema.index({ role: 1 }); // Filter by role in admin queries
+userSchema.index({ createdAt: -1 }); // Latest registrations for admin dashboard
 
 // ─── Pre-save Middleware ──────────────────────────────────────────────────────
 
@@ -115,15 +112,9 @@ userSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-
 userSchema.methods.comparePassword = async function (candidatePassword) {
-
-
-  console.log("candidatePassword:", candidatePassword);
-  console.log("storedHashedPassword:", this.password);
-  return bcrypt.compare(candidatePassword, this.password);
+  return await bcrypt.compare(candidatePassword, this.password);
 };
-
 
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
@@ -134,24 +125,24 @@ userSchema.methods.generateAccessToken = function () {
       role: this.role,
     },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "15m" }
+    { expiresIn: "15m" },
   );
 };
-
 
 userSchema.methods.generateRefreshToken = function () {
-  return jwt.sign(
-    { _id: this._id },
-    process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: "7d" }
-  );
+  return jwt.sign({ _id: this._id }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: "7d",
+  });
 };
 userSchema.methods.generatePasswordResetToken = function () {
-  const resetToken= crypto.randomBytes(32).toString("hex");
-  this.passwordResetToken= crypto.createHash("sha256").update(resetToken).digest("hex");
-  this.passwordResetExpiry= Date.now()+ 10*60*1000; //10 minutes
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  this.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+  this.passwordResetExpiry = Date.now() + 10 * 60 * 1000; //10 minutes
   return resetToken;
-}
+};
 
 const User = mongoose.model("User", userSchema);
 

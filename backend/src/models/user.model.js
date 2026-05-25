@@ -143,6 +143,14 @@ userSchema.methods.generatePasswordResetToken = function () {
   this.passwordResetExpiry = Date.now() + 10 * 60 * 1000; //10 minutes
   return resetToken;
 };
+userSchema.methods.generateEmailVerificationToken = function () {
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  this.emailVerificationToken = crypto  .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+  this.emailVerificationExpiry = Date.now() + 15 * 60 * 1000; //15 minutes
+  return verificationToken;
+};
 
 const User = mongoose.model("User", userSchema);
 

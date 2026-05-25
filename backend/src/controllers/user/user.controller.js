@@ -315,6 +315,17 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       ),
     );
 });
+//delete user profile
+const deleteUserProfile = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const user = await User.findByIdAndDelete(userId);
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+  return res
+    .status(200)
+    .json(new apiResponse(200, {}, "User profile deleted successfully"));
+});
 //change password
 const changePassword = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -419,6 +430,113 @@ const changeUserRole = asyncHandler(async (req, res) => {
       new apiResponse(200, { user }, "User role updated successfully")
     );
 });
+//delete user (admin only)
+const deleteUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // only admin
+  if (req.user.role !== "admin") {
+    throw new apiError(403, "Only admins can delete users");
+  }
+
+  // prevent self delete
+  if (req.user._id.toString() === userId) {
+    throw new apiError(400, "You cannot delete your own account");
+  }
+
+  // find user first
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+
+  // optional: prevent deleting admins
+  if (user.role === "admin") {
+    throw new apiError(403, "Admins cannot be deleted");
+  }
+
+  await user.deleteOne();
+
+  return res.status(200).json(
+    new apiResponse(200, null, "User deleted successfully")
+  );
+});
+
+// ban user (admin only)
+const banUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  if (req.user.role !== "admin") {
+    throw new apiError(403, "Only admins can ban users");
+  }
+  if (req.user._id.toString() === userId) {
+    throw new apiError(400, "You cannot ban your own account");
+  }
+  const user= await User.findById(userId);
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+  if(user.role==="admin"){
+    throw new apiError(400, "You cannot ban another admin");
+  }
+  if (user.isBanned===true) {
+    throw new apiError(400, "User is already banned");
+  }
+  user.isBanned=true;
+  await user.save({ validateBeforeSave: false });
+  const bannedUser = await User.findById(userId).select("-password -refreshToken");
+  return res
+    .status(200)
+    .json(new apiResponse(200, { bannedUser }, "User banned successfully"));
+});
+// unban User (admin Only)
+const unbanUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  if (req.user.role !== "admin") {
+    throw new apiError(403, "Only admins can unban users");
+  }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+  if (user.isBanned !== true) {
+    throw new apiError(400, "User is not banned");
+  }
+  user.isBanned = false;
+  await user.save({ validateBeforeSave: false });
+  const unbannedUser = await User.findById(userId).select("-password -refreshToken");
+  return res
+    .status(200)
+    .json(new apiResponse(200, { unbannedUser }, "User unbanned successfully"));
+});
+// verify User Email
+const verifyEmail = asyncHandler(async (req, res) => {
+  const userId=req.user._id;
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new apiError(404, "User not found");     
+  }
+  if (user.isVerified===true) {
+    throw new apiError(400, "Email is already verified");
+  } 
+  const verificationToken = user.generateEmailVerificationToken();
+  await user.save({ validateBeforeSave: false });
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;  
+  await sendEmail({
+    to: user.email,
+    subject: "Email Verification",
+    html: `
+      <p>Hello ${user.username},</p>
+      <p>Please click the link below to verify your email address:</p>
+      <a href="${verificationUrl}" target="_blank">Verify Email</a>
+      <p>This link will expire in 15 minutes.</p>
+    `,
+  });
+
+  return res.status(200).json(
+    new apiResponse(200, null, "Verification email sent successfully")
+  );
+});
 export {
   registerUser,
   loginUser,
@@ -430,5 +548,10 @@ export {
   updateUserProfile,
   changePassword,
   getAllUsers,
-  changeUserRole
+  changeUserRole,
+  deleteUser,
+  banUser,
+  unbanUser,
+  deleteUserProfile,
+  verifyEmail,
 };

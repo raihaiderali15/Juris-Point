@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { registerUser,loginUser,logoutUser ,forgotPassword ,resetPassword,refreshAccessToken ,getUserProfile ,updateUserProfile,changePassword ,getAllUsers,changeUserRole } from "../controllers/user/user.controller.js";
+import { registerUser,loginUser,logoutUser ,forgotPassword ,resetPassword,refreshAccessToken ,getUserProfile ,updateUserProfile,changePassword ,getAllUsers,changeUserRole ,verifyEmail} from "../controllers/user/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 const router = Router();
 
@@ -15,4 +15,5 @@ router.put("/update-profile", verifyJwt, updateUserProfile);
 router.put("/change-password", verifyJwt, changePassword);
 router.get("/users", verifyJwt, getAllUsers);
 router.put("/users/:userId/role", verifyJwt, changeUserRole);
+router.post("verify-email",verifyJwt, verifyEmail);
 export default router;

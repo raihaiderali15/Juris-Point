@@ -205,7 +205,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
     await sendEmail({
       to: user.email,
       subject: "Password Reset Request",
-      text: `You requested a password reset. Click the link to reset your password: ${resetUrl}`,
+      html: `
+        <p>Hello ${user.username},</p>
+        <p>You requested to reset your password. Please click the link below to set a new password:</p>
+        <a href="${resetUrl}" target="_blank">Reset Password</a>
+      `,
     });
   } catch (err) {
     user.passwordResetToken = undefined;
@@ -537,6 +541,29 @@ const verifyEmail = asyncHandler(async (req, res) => {
     new apiResponse(200, null, "Verification email sent successfully")
   );
 });
+//verify email token and set isVerified to true
+const verifyEmailToken = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    throw new apiError(400, "Verification token is required");
+  }
+  const hashedToken = createHash("sha256").update(token).digest("hex");
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpiry: { $gt: Date.now() },
+  });
+  if (!user) {
+    throw new apiError(400, "Invalid or expired verification token");
+  }
+  user.isVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpiry = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  return res.status(200).json(
+    new apiResponse(200, null, "Email verified successfully")
+  );
+});
 export {
   registerUser,
   loginUser,
@@ -554,4 +581,5 @@ export {
   unbanUser,
   deleteUserProfile,
   verifyEmail,
+  verifyEmailToken
 };

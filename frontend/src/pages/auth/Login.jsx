@@ -95,7 +95,7 @@ export default function Login() {
           placeholder="Enter your password"
           name="password"
           value={form.password}
-          error={errors.password}
+          error={errors}
           onChange={handleChange}
         />
         {formError && <p className="text-sm text-red-400 -mt-1">{formError}</p>}

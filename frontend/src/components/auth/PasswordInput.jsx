@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-
+import { Input } from "../ui/Input";
 /**
  * PasswordInput — password field with a "Show" toggle button.
  * Layout only: the toggle button is rendered but not wired to any state,
@@ -8,7 +7,7 @@ import { useState } from "react";
  * `useState` + `type={revealed ? 'text' : 'password'}` when you add logic.
  */
 export function PasswordInput({ label = 'Password', placeholder = 'Enter your password', error , ...props }) {
-  console.log(error)
+ 
 
  
   const [passShow, setPassShow] = useState(false);
@@ -18,10 +17,11 @@ export function PasswordInput({ label = 'Password', placeholder = 'Enter your pa
         {label}
       </label>
       <div className="relative">
-        <input
-        error={error}
+
+        <Input
           type={passShow ? "text" : "password"}
           placeholder={placeholder}
+          error={error.password}
           className="w-full bg-dark border border-border text-text px-4 py-3.5 pr-16 font-sans text-sm outline-none focus:border-gold focus:bg-dark3 transition-colors placeholder:text-text-muted/50"
           {...props}
         />

@@ -5,3 +5,6 @@ import api from "./api";
 
 
 }
+export  const getUserService=async ()=>{
+    return await api.get("/users/profile")
+}

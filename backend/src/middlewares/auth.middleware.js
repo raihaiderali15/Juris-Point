@@ -8,11 +8,11 @@ const verifyJwt = asyncHandler(async (req, res, next) => {
     req?.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
   if (!accessToken) {
-    throw new apiError(4001, "Unauthorized User from cookies or headers");
+    throw new apiError(401, "Unauthorized User from cookies or headers");
   }
   const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
   if (!decoded) {
-    throw new apiError(4001, "Invalid Access Token");
+    throw new apiError(401, "Invalid Access Token");
   }
   const user = await User.findById(decoded._id).select(
     "-password -refreshToken",

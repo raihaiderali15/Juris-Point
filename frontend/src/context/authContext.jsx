@@ -1,12 +1,13 @@
 import { createContext, useContext, useState } from "react";
 import { loginService } from "../services/auth.services.js";
-
+import { getUserService } from "../services/auth.services.js";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
+  //Login function
   const login = async (credentials) => {
     try {
       setLoading(true);
@@ -37,6 +38,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+// get user Profile function
+const getUserProfile = async () => {
+  try{
+    
+  }
+  catch (error) {}}
+
   const value = {
     user,
     loading,

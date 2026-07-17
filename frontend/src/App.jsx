@@ -1,8 +1,10 @@
 import React from 'react'
-
+import Navbar from './components/Navbar'
 const App = () => {
   return (
-    <div>App</div>
+    <div className='mt-20 bg-dark min-h-screen'>
+      <Navbar />
+    </div>
   )
 }
 

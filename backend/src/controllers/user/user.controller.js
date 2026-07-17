@@ -65,12 +65,12 @@ const loginUser = asyncHandler(async (req, res) => {
     "+password",
   );
   if (!user) {
-    throw new apiError(404, "User not found");
+throw new apiError(401, "Invalid email/username or password");
   }
 
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
-    throw new apiError(401, "Invalid credentials");
+ throw new apiError(401, "Invalid email/username or password");
   }
   const { accessToken, refreshToken } = await generateTokens(user._id);
   const ModifiedUser = await User.findById(user._id).select(

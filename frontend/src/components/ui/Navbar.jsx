@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "../ui/Button";
+import { useAuth } from "../../context/authContext";
 
 const navLinks = [
   { name: "NOTES", path: "/notes" },
@@ -12,6 +13,11 @@ const navLinks = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+   const {isAuthenticated,logoutUser} =useAuth()
+    const navigate= useNavigate()
+  const handleLogout=()=>{
+    logoutUser()
+  }
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 border-b border-border bg-dark-3/80 backdrop-blur-md">
@@ -45,9 +51,15 @@ const Navbar = () => {
 
         {/* Desktop Button */}
         <div className="hidden md:block">
-          <NavLink to="/login">
-            <Button variant="outline">SIGN IN</Button>
-          </NavLink>
+
+            <Button variant="outline"  onClick={()=>{setOpen(false);
+            if(isAuthenticated){
+              handleLogout();
+            }else{
+              navigate("/login")
+            }
+          }}>{isAuthenticated?"Logout":"Login"}</Button>
+         
         </div>
 
         {/* Mobile Menu Button */}
@@ -83,14 +95,13 @@ const Navbar = () => {
             </li>
           ))}
 
-          <NavLink
-            to="/login"
-            onClick={() => setOpen(false)}
-          >
-            <Button variant="outline" className="w-full">
-              SIGN IN
-            </Button>
-          </NavLink>
+          <Button variant="outline" className="w-full" onClick={()=>{setOpen(false);
+            if(isAuthenticated){
+              handleLogout();
+            }else{
+              navigate("/login")
+            }
+          }}>{isAuthenticated?"Logout":"Login"}</Button>
 
         </ul>
       </div>

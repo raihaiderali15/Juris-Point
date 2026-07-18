@@ -3,7 +3,6 @@
  * Reused for every text/email/password field across auth pages and admin forms.
  */
 export function Input({ label, error, className = '', ...props }) {
-  console.log(error)
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {label && (

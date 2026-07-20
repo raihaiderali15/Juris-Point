@@ -119,7 +119,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   const refreshToken =
     req.cookies?.refreshToken ||
     req.header("Authorization")?.replace("Bearer ", "");
-
   if (!refreshToken) {
     throw new apiError(401, "Unauthorized user");
   }

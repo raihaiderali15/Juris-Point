@@ -1,5 +1,5 @@
 import api from "./api";
-import { refreshTokenService } from "./auth.services";
+import refreshInstance from "./refreshtoken";
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -11,7 +11,8 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        await refreshTokenService();
+        console.log("Access token expired. Attempting to refresh...");
+       await  refreshInstance.post("/users/refresh-token");
         return api(originalRequest);
       } catch (refreshError) {
         return Promise.reject(refreshError);

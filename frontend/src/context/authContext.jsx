@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { loginService, logoutService, refreshTokenService } from "../services/auth.services.js";
+import { loginService, logoutService } from "../services/auth.services.js";
 import { getUserService } from "../services/auth.services.js";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     getUserProfile();
   }, []);
@@ -43,9 +43,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await getUserService();
-      console.log(response);
       setUser(response.data.user);
-      setIsAuthenticated(true);
+      setIsAuthenticated(true)
+  
       return {
         success: true,
         message: response.data.message,

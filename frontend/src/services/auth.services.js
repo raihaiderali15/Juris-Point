@@ -10,6 +10,3 @@ export const getUserService = async () => {
 export const logoutService = async () => {
   return await api.post("/users/logout");
 };
-export const refreshTokenService = async () => {
-  return await api.post("/users/refresh-token");
-};

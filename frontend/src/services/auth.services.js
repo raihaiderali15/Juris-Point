@@ -10,3 +10,8 @@ export const getUserService = async () => {
 export const logoutService = async () => {
   return await api.post("/users/logout");
 };
+ 
+
+export const registerService = async (data) => {
+  return await api.post("/users/register", data);
+}

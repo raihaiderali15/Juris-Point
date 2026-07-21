@@ -22,9 +22,9 @@ const generateTokens = async (userId) => {
 
 //register user
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, password, fullName, confirmPassword } = req.body;
-  //checking if username email password is provided
-  const fields = { username, email, password, fullName, confirmPassword };
+  const {email, password, fullName, confirmPassword } = req.body;
+  //checking if  email password is provided
+  const fields = {email, password, fullName, confirmPassword };
   for (const [key, value] of Object.entries(fields)) {
     if (!value?.trim()) {
       throw new apiError(400, `${key} is required`);
@@ -34,13 +34,12 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new apiError(400, "Password and confirm password do not match");
   }
   //checking if user already exists
-  const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+  const existingUser = await User.findOne({ $or: [{ email } ]});
   if (existingUser) {
-    throw new apiError(409, "User with this email or username already exists");
+    throw new apiError(409, "User with this email already exists");
   }
   //creating user
   const user = await User.create({
-    username,
     email,
     password,
     fullName,
@@ -56,21 +55,21 @@ const registerUser = asyncHandler(async (req, res) => {
 //login user
 
 const loginUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
-  if (!password?.trim() || (!email?.trim() && !username?.trim())) {
-    throw new apiError(400, "Email or username and password are required");
+  const { email, password } = req.body;
+  if (!password?.trim() || (!email?.trim())) {
+    throw new apiError(400, "Email and password are required");
   }
 
-  const user = await User.findOne({ $or: [{ email }, { username }] }).select(
+  const user = await User.findOne({ $or: [{ email }] }).select(
     "+password",
   );
   if (!user) {
-throw new apiError(401, "Invalid email/username or password");
+throw new apiError(401, "Invalid email or password");
   }
 
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
- throw new apiError(401, "Invalid email/username or password");
+ throw new apiError(401, "Invalid email or password");
   }
   const { accessToken, refreshToken } = await generateTokens(user._id);
   const ModifiedUser = await User.findById(user._id).select(
@@ -205,7 +204,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
       to: user.email,
       subject: "Password Reset Request",
       html: `
-        <p>Hello ${user.username},</p>
+        <p>Hello ${user.fullName},</p>
         <p>You requested to reset your password. Please click the link below to set a new password:</p>
         <a href="${resetUrl}" target="_blank">Reset Password</a>
       `,
@@ -275,10 +274,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
 // update Profile
 const updateUserProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { username, email, fullName } = req.body;
+  const { email, fullName } = req.body;
 
   const fieldsToUpdate = {};
-  if (username?.trim()) fieldsToUpdate.username = username.trim();
   if (email?.trim()) {
     if (!validator.isEmail(email))
       throw new apiError(400, "Invalid email format");
@@ -299,7 +297,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     ).select("-password -refreshToken");
   } catch (err) {
     if (err.code === 11000) {
-      throw new apiError(409, "Username or email already in use");
+      throw new apiError(409, "email already in use");
     }
     throw err;
   }
@@ -529,7 +527,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
     to: user.email,
     subject: "Email Verification",
     html: `
-      <p>Hello ${user.username},</p>
+      <p>Hello ${user.fullName},</p>
       <p>Please click the link below to verify your email address:</p>
       <a href="${verificationUrl}" target="_blank">Verify Email</a>
       <p>This link will expire in 15 minutes.</p>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { loginService, logoutService } from "../services/auth.services.js";
+import { loginService, logoutService, registerService } from "../services/auth.services.js";
 import { getUserService } from "../services/auth.services.js";
 const AuthContext = createContext();
 
@@ -19,8 +19,8 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       return {
         success: true,
-        message: response.data.message,
-        user: response.data.user,
+        message: response?.data?.message,
+        user: response?.data?.data?.user,
       };
     } catch (error) {
       if (error.code === "ERR_NETWORK") {
@@ -82,6 +82,24 @@ const logoutUser=async()=>{
     setLoading(false)
   }
 }
+//create or register user
+const register=async(data)=>
+  {
+    try {
+        const response= await registerService(data)
+       return{
+        success:true,
+        message:response.data?.message,
+        user:response.data?.user
+       }
+    } catch (error) {
+      return{
+        success:false,
+        message:error.response?.data?.message
+      }
+    }
+
+  }
 
   const value = {
     user,
@@ -89,7 +107,8 @@ const logoutUser=async()=>{
     isAuthenticated,
     login,
     getUserProfile,
-    logoutUser
+    logoutUser,
+    register
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

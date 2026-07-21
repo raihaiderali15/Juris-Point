@@ -15,7 +15,7 @@ export function PasswordInput({ label = 'Password', placeholder = 'Enter your pa
         <Input
           type={passShow ? "text" : "password"}
           placeholder={placeholder}
-          error={error?.password }
+          error={error}
           className="w-full bg-dark border border-border text-text px-4 py-3.5 pr-16 font-sans text-sm outline-none focus:border-gold focus:bg-dark3 transition-colors placeholder:text-text-muted/50"
           {...props}
         />

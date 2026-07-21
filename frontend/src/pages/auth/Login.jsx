@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/Button";
 import { useState } from "react";
 import { useAuth } from "../../context/authContext";
 import { useNavigate } from "react-router-dom";
-
+import { toast } from "sonner";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +46,7 @@ export default function Login() {
         setFormError(result.message);
         return;
       }
+      toast.success(`Welcome back, ${result?.user?.fullName}!`);
       navigate("/");
     } catch (error) {
       setFormError(
@@ -95,7 +96,7 @@ export default function Login() {
           placeholder="Enter your password"
           name="password"
           value={form.password}
-          error={errors}
+          error={errors.password}
           onChange={handleChange}
         />
         {formError && <p className="text-sm text-red-400 -mt-1">{formError}</p>}

@@ -226,8 +226,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
     );
 });
 const resetPassword = asyncHandler(async (req, res) => {
-  const { token } = req.query;
-  const { password, confirmPassword } = req.body;
+
+  const { password, confirmPassword,token } = req.body;
+  console.log("Request Body:", token);
   if (!token) {
     throw new apiError(400, "Reset token is required");
   }

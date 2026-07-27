@@ -1,13 +1,12 @@
-/**
- * PasswordStrengthMeter — 4-segment strength bar + label.
- * Layout only: `filled` (0-4) and `label` are plain props showing a fixed
- * example state. Real strength calculation is logic you'll add later.
- */
-export function PasswordStrengthMeter({ filled = 2, level = 'mid', label = 'Medium — add a symbol for a stronger password' }) {
+export function PasswordStrengthMeter({
+  filled,
+  level,
+  label,
+}) {
   const fillColor = {
-    weak: 'bg-error',
-    mid: 'bg-gold',
-    strong: 'bg-success',
+    weak: "bg-red-500",
+    mid: "bg-gold",
+    strong: "bg-green-500",
   }[level];
 
   return (
@@ -16,11 +15,16 @@ export function PasswordStrengthMeter({ filled = 2, level = 'mid', label = 'Medi
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className={`h-[3px] flex-1 ${i < filled ? fillColor : 'bg-dark4'}`}
+            className={`h-[3px] flex-1 ${
+              i < filled ? fillColor: "bg-dark"
+            }`}
           />
         ))}
       </div>
-      <div className="text-xs text-text-muted mt-1.5 tracking-wide">{label}</div>
+
+      <div className="mt-1.5 text-xs text-text-muted">
+        {label}
+      </div>
     </div>
   );
 }

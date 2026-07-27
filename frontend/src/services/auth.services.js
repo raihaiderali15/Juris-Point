@@ -10,8 +10,15 @@ export const getUserService = async () => {
 export const logoutService = async () => {
   return await api.post("/users/logout");
 };
- 
+
+
 
 export const registerService = async (data) => {
   return await api.post("/users/register", data);
+}
+export const forgotPasswordService = async (data) => {
+  return await api.post("/users/forgot-password", data);
+}
+export const resetPasswordService=async(data)=>{
+  return await api.post("/users/reset-password", data);
 }

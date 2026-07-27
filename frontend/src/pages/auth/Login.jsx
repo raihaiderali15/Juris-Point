@@ -23,7 +23,7 @@ export default function Login() {
 
     seterrors((prev) => ({ ...prev, [name]: "" }));
     setFormError("");
-  };
+  }; 
   const handleSubmit = async (e) => {
     e.preventDefault();
     seterrors({});

@@ -3,8 +3,9 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useAuth } from "../../context/authContext";
-
+import {toast} from "sonner"
 const navLinks = [
+  {name:"HOME", path:"/"},
   { name: "NOTES", path: "/notes" },
   { name: "CASELAW", path: "/caselaw" },
   { name: "SERVICES", path: "/services" },
@@ -15,8 +16,14 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
    const {isAuthenticated,logoutUser} =useAuth()
     const navigate= useNavigate()
-  const handleLogout=()=>{
-    logoutUser()
+  const handleLogout=async()=>{
+  const response =await  logoutUser()
+  if(response.success){
+    toast.success(response.message)
+  }else{
+    toast.error(response.message)
+  }
+
   }
 
   return (

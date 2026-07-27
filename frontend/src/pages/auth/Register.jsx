@@ -23,10 +23,43 @@ export default function Register() {
   const [formError, setFormError] = useState("");
   const [error, setError] = useState({});
   const [isSubmiting, setIsSubmiting] = useState(false);
+  const [strength, setStrength] = useState({
+    filled: 0,
+    level: "",
+    message: "",
+});
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setError((prev) => ({ ...prev, [name]: "" }));
+ const password = name === "password" ? value : form.password; 
+
+    if (password.length === 0) {
+      setStrength({
+        filled: 0,
+        level: "",
+        message: "",
+      });
+    } else if (password.length < 4) {
+      setStrength({
+        filled: 1,
+        level: "weak",
+        message: "Weak password",
+      });
+    } else if (password.length < 8) {
+      setStrength({
+        filled: 2,
+        level: "mid",
+        message: "Medium password",
+      });
+    } else {
+      setStrength({
+        filled: 4,
+        level: "strong",
+        message: "Strong password",
+      });
+    }
+
     setFormError("");
   };
   const handleSubmit = async (e) => {
@@ -48,7 +81,6 @@ export default function Register() {
     }
     if (form.password !== form.confirmPassword) {
       newErrors.confirmPassword = "Password and Confirm Password do not match";
-      console.log("not matching");
     }
     if (Object.keys(newErrors).length > 0) {
       setError(newErrors);
@@ -61,9 +93,9 @@ export default function Register() {
       const response = await register(form);
 
       setFormError(response.message);
-      
+        console.log(formError)
       if (response.success) {
-      toast.success("Account created successfully.");
+        toast.success("Account created successfully.");
         navigate("/login");
       }
     } finally {
@@ -126,9 +158,9 @@ export default function Register() {
             onChange={handleChange}
           />
           <PasswordStrengthMeter
-            filled={2}
-            level="mid"
-            label="Medium — add a symbol for a stronger password"
+            filled={strength.filled}
+            level={strength.level}
+            label={strength.message}
           />
         </div>
 

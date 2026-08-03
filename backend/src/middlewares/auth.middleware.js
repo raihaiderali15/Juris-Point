@@ -39,7 +39,7 @@ const verifyJwt = asyncHandler(async (req, res, next) => {
 
   req.user = user;
 
-  next();
+ next();
 });
 
 export { verifyJwt };

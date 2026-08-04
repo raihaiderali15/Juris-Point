@@ -3,6 +3,7 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import { apiError } from "../../utils/apiError.js";
 import { apiResponse } from "../../utils/apiResponse.js";
 import { uploadOnCloudinary } from "../../utils/uploadOnCloundinary.js";
+import removeFromCloudinary from "../../utils/removeFromCloudinary.js";
 // ✅ Get all notes (current)
 // Get single note
 // Download note
@@ -14,6 +15,8 @@ import { uploadOnCloudinary } from "../../utils/uploadOnCloundinary.js";
 // Comments
 // Premium/free access control
 // Admin dashboard
+
+
 //create notes
 export const createNote = asyncHandler(async (req, res, next) => {
   const {
@@ -80,6 +83,83 @@ export const createNote = asyncHandler(async (req, res, next) => {
     .status(201)
     .json(new apiResponse(201, note, "Note created successfully"));
 });
+//uptade Notes
+export const updateNote = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const note = await Note.findById(id);
+
+  if (!note) {
+    throw new apiError(404, "Note not found");
+  }
+
+  const {
+    title,
+    description,
+    category,
+    tags,
+    accessLevel,
+    author,
+    isPublished,
+  } = req.body;
+
+  if (title !== undefined) {
+    if (!title.trim()) {
+      throw new apiError(400, "Title cannot be empty");
+    }
+    note.title = title.trim();
+  }
+
+  if (description !== undefined) {
+    if (!description.trim()) {
+      throw new apiError(400, "Description cannot be empty");
+    }
+    note.description = description.trim();
+  }
+
+  if (category !== undefined) {
+    note.category = category;
+  }
+
+  if (tags !== undefined) {
+    note.tags = tags
+      .split(",")
+      .map(tag => tag.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  if (accessLevel !== undefined) {
+    note.accessLevel = accessLevel;
+  }
+
+  if (author !== undefined) {
+    note.author = author.trim();
+  }
+
+  if (isPublished !== undefined) {
+    note.isPublished =
+      isPublished === true || isPublished === "true";
+  }
+
+  await note.save();
+
+  return res
+    .status(200)
+    .json(
+      new apiResponse(200, note, "Note updated successfully")
+    );
+});
+//Delete Notes
+export const deleteNotes=asyncHandler(async(req,res,next)=>{
+  const noteId=req.params.id;
+  const note=await Note.findById(noteId);
+  if(!note){
+    throw new apiError(404,"Note not found");
+  }
+ await removeFromCloudinary(note.file.publicId,"raw");
+ const deletedNote=await Note.findByIdAndDelete(noteId);
+  return res.status(200).json(new apiResponse(200,deletedNote,"Note deleted successfully"))
+});
 //Get all Notes
 export const getAllNotes = asyncHandler(async (req, res, next) => {
   const { category, accessLevel, search } = req.query;
@@ -120,4 +200,15 @@ export const getAllNotes = asyncHandler(async (req, res, next) => {
         "Notes fetched successfully",
       ),
     );
+});
+//Get note by ID
+export const getNoteById = asyncHandler(async (req, res, next) => {
+  const noteId = req.params.id;
+  const note = await Note.findByIdAndUpdate(noteId,{$inc:{views:1}},{new:true}).populate("category","name").lean();
+  if (!note) {
+    throw new apiError(404, "Note not found");
+  }
+  return res
+    .status(200)
+    .json(new apiResponse(200, note, "Note fetched successfully"));
 });

@@ -156,7 +156,11 @@ export const deleteNotes=asyncHandler(async(req,res,next)=>{
   if(!note){
     throw new apiError(404,"Note not found");
   }
- await removeFromCloudinary(note.file.publicId,"raw");
+ const response =await removeFromCloudinary(note.file.publicId,"raw");
+ console.log("Cloudinary delete response:", response);
+ if(!response){
+  throw new apiError(500,"Failed to delete file from Cloudinary");
+ }
  const deletedNote=await Note.findByIdAndDelete(noteId);
   return res.status(200).json(new apiResponse(200,deletedNote,"Note deleted successfully"))
 });

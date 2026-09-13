@@ -17,7 +17,17 @@ import removeFromCloudinary from "../../utils/removeFromCloudinary.js";
 // Admin dashboard
 
 
-//create notes
+const ALLOWED_ACCESS_LEVELS = ["public", "private", "restricted"];
+
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeTags = (tags) => {
+  const arr = Array.isArray(tags)
+    ? tags
+    : String(tags).split(",");
+  return arr.map((t) => t.trim().toLowerCase()).filter(Boolean);
+};
+
 export const createNote = asyncHandler(async (req, res, next) => {
   const {
     title,
@@ -28,6 +38,7 @@ export const createNote = asyncHandler(async (req, res, next) => {
     author,
     isPublished,
   } = req.body;
+
   const requiredFields = {
     title,
     description,
@@ -48,49 +59,71 @@ export const createNote = asyncHandler(async (req, res, next) => {
       throw new apiError(400, `Field ${field} is required`);
     }
   }
+
+  if (!ALLOWED_ACCESS_LEVELS.includes(accessLevel)) {
+    throw new apiError(400, "Invalid accessLevel");
+  }
+
+  const categoryExists = await Category.exists({ _id: category });
+  if (!categoryExists) {
+    throw new apiError(400, "Invalid category");
+  }
+
   const localPathofPdf = req.file?.path;
   if (!localPathofPdf) {
     throw new apiError(400, "PDF file is required");
   }
+
   const response = await uploadOnCloudinary(
     localPathofPdf,
     "raw",
     "jurispoint/pdf",
   );
-  const parsedTags = tags
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
 
-  const note = await Note.create({
-    title,
-    description,
-    category,
-    tags: parsedTags,
-    accessLevel,
-    author,
-    isPublished: isPublished === "true",
-    uploadedBy: req.user?._id,
-    file: {
-      url: response.secure_url,
-      publicId: response.public_id,
-      originalName: req.file?.originalname,
-      format: req.file?.fieldname,
-      size: response.bytes,
-    },
-  });
+  let note;
+  try {
+    note = await Note.create({
+      title: title.trim(),
+      description: description.trim(),
+      category,
+      tags: normalizeTags(tags),
+      accessLevel,
+      author: author.trim(),
+      isPublished: isPublished === true || isPublished === "true",
+      uploadedBy: req.user?._id,
+      file: {
+        url: response.secure_url,
+        publicId: response.public_id,
+        originalName: req.file?.originalname,
+        format: req.file?.mimetype,
+        size: response.bytes,
+      },
+    });
+  } catch (err) {
+    // Roll back the uploaded file so it doesn't get orphaned on Cloudinary
+    await removeFromCloudinary(response.public_id, "raw").catch(() => {});
+    throw err;
+  }
+
   return res
     .status(201)
     .json(new apiResponse(201, note, "Note created successfully"));
 });
-//uptade Notes
+
+// Update Note
 export const updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const note = await Note.findById(id);
-
   if (!note) {
     throw new apiError(404, "Note not found");
+  }
+
+  // Only the uploader (or an admin) can edit
+  const isOwner = note.uploadedBy?.toString() === req.user?._id?.toString();
+  const isAdmin = req.user?.role === "admin";
+  if (!isOwner && !isAdmin) {
+    throw new apiError(403, "You are not authorized to edit this note");
   }
 
   const {
@@ -118,58 +151,85 @@ export const updateNote = asyncHandler(async (req, res) => {
   }
 
   if (category !== undefined) {
+    const categoryExists = await Category.exists({ _id: category });
+    if (!categoryExists) {
+      throw new apiError(400, "Invalid category");
+    }
     note.category = category;
   }
 
   if (tags !== undefined) {
-    note.tags = tags
-      .split(",")
-      .map(tag => tag.trim().toLowerCase())
-      .filter(Boolean);
+    note.tags = normalizeTags(tags);
   }
 
   if (accessLevel !== undefined) {
+    if (!ALLOWED_ACCESS_LEVELS.includes(accessLevel)) {
+      throw new apiError(400, "Invalid accessLevel");
+    }
     note.accessLevel = accessLevel;
   }
 
   if (author !== undefined) {
+    if (!author.trim()) {
+      throw new apiError(400, "Author cannot be empty");
+    }
     note.author = author.trim();
   }
 
   if (isPublished !== undefined) {
-    note.isPublished =
-      isPublished === true || isPublished === "true";
+    note.isPublished = isPublished === true || isPublished === "true";
   }
 
   await note.save();
 
   return res
     .status(200)
-    .json(
-      new apiResponse(200, note, "Note updated successfully")
-    );
+    .json(new apiResponse(200, note, "Note updated successfully"));
 });
-//Delete Notes
-export const deleteNotes=asyncHandler(async(req,res,next)=>{
-  const noteId=req.params.id;
-  const note=await Note.findById(noteId);
-  if(!note){
-    throw new apiError(404,"Note not found");
+
+// Delete Note
+export const deleteNotes = asyncHandler(async (req, res, next) => {
+  const noteId = req.params.id;
+  const note = await Note.findById(noteId);
+  if (!note) {
+    throw new apiError(404, "Note not found");
   }
- const response =await removeFromCloudinary(note.file.publicId,"raw");
- console.log("Cloudinary delete response:", response);
- if(!response){
-  throw new apiError(500,"Failed to delete file from Cloudinary");
- }
- const deletedNote=await Note.findByIdAndDelete(noteId);
-  return res.status(200).json(new apiResponse(200,deletedNote,"Note deleted successfully"))
+
+  const isOwner = note.uploadedBy?.toString() === req.user?._id?.toString();
+  const isAdmin = req.user?.role === "admin";
+  if (!isOwner && !isAdmin) {
+    throw new apiError(403, "You are not authorized to delete this note");
+  }
+
+  // Delete the DB record first — if this fails, we haven't touched the file yet
+  const deletedNote = await Note.findByIdAndDelete(noteId);
+
+  const cloudinaryResponse = await removeFromCloudinary(
+    note.file.publicId,
+    "raw",
+  );
+
+  if (cloudinaryResponse?.result !== "ok") {
+    // Note is already gone from DB; log for manual cleanup instead of
+    // throwing (the delete itself succeeded from the user's point of view)
+    console.error(
+      `Cloudinary cleanup failed for publicId ${note.file.publicId}:`,
+      cloudinaryResponse,
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, deletedNote, "Note deleted successfully"));
 });
-//Get all Notes
+
+// Get all Notes
 export const getAllNotes = asyncHandler(async (req, res, next) => {
   const { category, accessLevel, search } = req.query;
   const limit = Number(req.query.limit) || 10;
   const page = Number(req.query.page) || 1;
   const skip = (page - 1) * limit;
+
   const filter = {};
   if (category) {
     filter.category = category;
@@ -178,40 +238,54 @@ export const getAllNotes = asyncHandler(async (req, res, next) => {
     filter.accessLevel = accessLevel;
   }
   if (search) {
-    filter.title = { $regex: search, $options: "i" };
+    const safeSearch = escapeRegex(search);
+    filter.$or = [
+      { title: { $regex: safeSearch, $options: "i" } },
+      { description: { $regex: safeSearch, $options: "i" } },
+    ];
   }
-  const allowedSortFields = ["createdAt", "title", "views", "downloads"];
 
+  const allowedSortFields = ["createdAt", "title", "views", "downloads"];
   const sortBy = allowedSortFields.includes(req.query.sortBy)
     ? req.query.sortBy
     : "createdAt";
-
   const order = req.query.order === "asc" ? 1 : -1;
+  const sortOptions = { [sortBy]: order };
 
-  const sortOptions = {
-    [sortBy]: order,
-  };
-
-  const notes = await Note.find(filter).skip(skip).limit(limit).sort(sortOptions).lean();
+  const notes = await Note.find(filter)
+    .skip(skip)
+    .limit(limit)
+    .sort(sortOptions)
+    .lean();
   const totalNotes = await Note.countDocuments(filter);
   const totalPages = Math.ceil(totalNotes / limit);
+
   return res
     .status(200)
     .json(
       new apiResponse(
         200,
-        { notes, totalNotes, totalPages,skip,limit,page },
+        { notes, totalNotes, totalPages, skip, limit, page },
         "Notes fetched successfully",
       ),
     );
 });
-//Get note by ID
+
+// Get note by ID
 export const getNoteById = asyncHandler(async (req, res, next) => {
   const noteId = req.params.id;
-  const note = await Note.findByIdAndUpdate(noteId,{$inc:{views:1}},{new:true}).populate("category","name").lean();
+  const note = await Note.findByIdAndUpdate(
+    noteId,
+    { $inc: { views: 1 } },
+    { new: true },
+  )
+    .populate("category", "name")
+    .lean();
+
   if (!note) {
     throw new apiError(404, "Note not found");
   }
+
   return res
     .status(200)
     .json(new apiResponse(200, note, "Note fetched successfully"));

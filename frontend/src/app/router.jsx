@@ -12,6 +12,7 @@ import ProtectedRoute from "../routes/ProctectedRoute";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import  ForgotpasswordSend from "../pages/auth/ForgotPasswordSent"
 import ResetPassword from "../pages/auth/ResetPassword";
+import AdminPage from "../pages/adminPage";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       {path:"forgot-password" , element: <ForgotPassword/>},
       {path:"forgot-password-send" , element:<ForgotpasswordSend/>}  ,
       {path:"reset-password" , element:<ResetPassword/>},
+      {path:"admin" , element:<AdminPage/>},
 
 
 

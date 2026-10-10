@@ -1,6 +1,7 @@
 import { UploadCloud } from "lucide-react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { Input } from "../components/ui/Input";
+import CategoryField from "../components/admin/category";
 import { useState } from "react";
 const inputClasses =
   "w-full border border-border bg-dark px-3.5 py-2.5 text-sm text-text outline-none transition-colors focus:border-gold";
@@ -104,8 +105,9 @@ export default function UploadNotesPage() {
             />
 
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClasses}>Category</label>
+          <div className="flex flex-col gap-1.5 z-50">
+            <CategoryField />
+            {/* <label className={labelClasses}>Category</label>
             <select className={inputClasses} style={selectArrow}>
               <option>Contract Law</option>
               <option>Criminal Law</option>
@@ -113,7 +115,7 @@ export default function UploadNotesPage() {
               <option>Tort Law</option>
               <option>Equity & Trusts</option>
               <option>Land Law</option>
-            </select>
+            </select> */}
           </div>
         </div>
 
